@@ -102,6 +102,8 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
         run: |
           set -euo pipefail
+          # A runner image's Homebrew can lag the formula API; brew test then fails to load llvm.
+          brew update --quiet
           brew install --formula silk-lang/tap/silk
           brew test silk-lang/tap/silk
           brew audit --formula silk-lang/tap/silk
