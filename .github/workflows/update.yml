@@ -107,7 +107,12 @@ jobs:
           brew install --formula silk-lang/tap/silk
           brew test silk-lang/tap/silk
           brew audit --formula silk-lang/tap/silk
-          silk --version
+          # The installed compiler, outside brew's test sandbox, builds and runs a new project.
+          cd "$RUNNER_TEMP"
+          silk init hello
+          cd hello
+          silk run | tee run.log
+          grep -q 'Hello, world!' run.log
 
   commit:
     name: Commit the tested formula
