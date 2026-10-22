@@ -31,18 +31,25 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 # Prints the body of a GitHub API GET; exits 4 on 404 so a missing stable release is not an error.
+# Network and server errors are retried; anything else fails with GitHub's message.
 api() {
-  local auth=()
+  local auth=() status request=1
   [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
-  local status
-  status=$(curl -sS -o "$tmp/response.json" -w '%{http_code}' \
-    -H 'Accept: application/vnd.github+json' "${auth[@]}" \
-    "https://api.github.com/repos/$repo/$1") || fail "cannot reach the GitHub API"
-  case "$status" in
-    200) cat "$tmp/response.json" ;;
-    404) return 4 ;;
-    *) fail "GitHub API returned HTTP $status for $1" ;;
-  esac
+  while :; do
+    status=$(curl -sS -o "$tmp/response.json" -w '%{http_code}' \
+      -H 'Accept: application/vnd.github+json' "${auth[@]}" \
+      "https://api.github.com/repos/$repo/$1") || status=000
+    case "$status" in
+      200) cat "$tmp/response.json"; return 0 ;;
+      404) return 4 ;;
+      000 | 5??)
+        [ "$request" -lt 4 ] || fail "GitHub API returned HTTP $status for $1 after $request tries"
+        sleep "$request"
+        request=$((request + 1))
+        ;;
+      *) fail "GitHub API returned HTTP $status for $1: $(jq -r '.message // empty' "$tmp/response.json" 2> /dev/null)" ;;
+    esac
+  done
 }
 
 encode() { printf '%s' "$1" | sed 's/+/%2B/g'; }
@@ -51,7 +58,16 @@ newest_dev() {
   local page=1 listing
   : > "$tmp/releases.json"
   while :; do
-    listing=$(api "releases?per_page=100&page=$page") || fail "cannot list releases"
+    # GitHub's release listing sometimes answers 200 with an empty list, most often right after
+    # a release is published. An empty first page is retried rather than read as "no releases".
+    local attempt=1
+    while :; do
+      listing=$(api "releases?per_page=100&page=$page") || fail "cannot list releases"
+      [ "$page" = 1 ] && [ "$(printf '%s' "$listing" | jq length)" = 0 ] || break
+      [ "$attempt" -lt 5 ] || fail "GitHub keeps returning an empty release list"
+      sleep "$attempt"
+      attempt=$((attempt + 1))
+    done
     printf '%s\n' "$listing" >> "$tmp/releases.json"
     [ "$(printf '%s' "$listing" | jq length)" -ge 100 ] || break
     page=$((page + 1))
