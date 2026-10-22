@@ -140,10 +140,6 @@ class Silk < Formula
 
   test do
     assert_equal "silk v#{version}", shell_output("#{bin}/silk --version").strip
-    # Silk opens paths component by component from /, which Homebrew's Linux test sandbox
-    # refuses for the test directory's ancestors; CI builds a project on Linux outside it.
-    return if OS.linux?
-
     system bin/"silk", "init", "hello"
     cd "hello" do
       assert_match "Hello, world!", shell_output("#{bin}/silk run")
