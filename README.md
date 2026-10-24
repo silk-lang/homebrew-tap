@@ -9,7 +9,7 @@ brew install silk-lang/tap/silk
 or `brew tap silk-lang/tap` once and then `brew install silk`.
 
 Supported platforms are the ones Silk publishes compilers for: macOS on Apple Silicon, and Linux
-on x86-64 and ARM64. The formula depends on Homebrew's `llvm` and points `silk` at its Clang;
+on x86-64 and ARM64. The formula installs the `silk` tool and the `silkc` compiler, depends on Homebrew's `llvm` and points both at its Clang;
 set `SILK_CLANG` or pass `--clang` to use another one.
 
 ## Which release

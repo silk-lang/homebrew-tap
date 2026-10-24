@@ -144,17 +144,22 @@ class Silk < Formula
   depends_on "llvm"
 
   def install
-    # The compiler finds lib/silk/stdlib beside its own bin directory, after resolving symlinks.
+    # The archive holds the silk tool as bin/silk and the compiler as bin/silkc. The compiler finds
+    # lib/silk/stdlib beside its own bin directory, and the tool runs the silkc beside it when no
+    # project or default selects another installed version.
     libexec.install "bin", "lib"
-    (bin/"silk").write <<~SH
-      #!/bin/bash
-      # Use Homebrew's Clang unless SILK_CLANG or --clang picks another.
-      export SILK_CLANG="\\\${SILK_CLANG:-#{Formula["llvm"].opt_bin}/clang}"
-      exec "#{libexec}/bin/silk" "\\\$@"
-    SH
+    %w[silk silkc].each do |name|
+      (bin/name).write <<~SH
+        #!/bin/bash
+        # Use Homebrew's Clang unless SILK_CLANG or --clang picks another.
+        export SILK_CLANG="\\\${SILK_CLANG:-#{Formula["llvm"].opt_bin}/clang}"
+        exec "#{libexec}/bin/#{name}" "\\\$@"
+      SH
+    end
   end
 
   test do
+    assert_equal "silk v#{version}", shell_output("#{bin}/silkc --version").strip
     assert_equal "silk v#{version}", shell_output("#{bin}/silk --version").strip
     system bin/"silk", "init", "hello"
     cd "hello" do
