@@ -15,7 +15,7 @@ set -euo pipefail
 repo=silk-lang/silk
 # The release signing key, published as minisign.pub at the root of silk-lang/silk.
 minisign_public_key=RWQefAo9Dbb8LrlLPaqWdRNlX5th2l7r+4WYhxRNbe5K5URDUht1XUDs
-targets=(aarch64-apple-darwin x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu)
+targets=(aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu)
 root=$(cd "$(dirname "$0")/.." && pwd)
 
 fail() {
@@ -122,10 +122,18 @@ class Silk < Formula
   license "MIT"
 
   on_macos do
-    depends_on arch: :arm64
+    on_arm do
+      url "${url[aarch64-apple-darwin]}"
+      sha256 "${sha[aarch64-apple-darwin]}"
+    end
 
-    url "${url[aarch64-apple-darwin]}"
-    sha256 "${sha[aarch64-apple-darwin]}"
+    on_intel do
+      url "${url[x86_64-apple-darwin]}"
+      sha256 "${sha[x86_64-apple-darwin]}"
+    end
+
+    # Silk links macOS programs with ld64.lld against its own libSystem stub.
+    depends_on "lld"
   end
 
   on_linux do

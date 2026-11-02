@@ -68,6 +68,8 @@ jobs:
       matrix:
         include:
           - { name: macOS arm64, os: macos-15, required: true }
+          # Homebrew supports Intel Macs at tier 3 only, so a failure here does not block an update.
+          - { name: macOS Intel, os: macos-15-intel, required: false }
           - { name: Linux x86-64, os: ubuntu-24.04, required: true }
           # Homebrew's own ARM64 Linux support is newer; a failure here does not block an update.
           - { name: Linux arm64, os: ubuntu-24.04-arm, required: false }

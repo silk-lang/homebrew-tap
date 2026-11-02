@@ -25,7 +25,7 @@ writes [`Formula/silk.rb`](Formula/silk.rb) with the archive SHA-256s pinned.
 
 The [update workflow](.github/workflows/update.yml) runs it every two hours (or on demand, with an
 optional exact tag), installs and tests the regenerated formula on macOS arm64 and Linux x86-64
-(Linux arm64 is tested but not required), and commits it only when those pass. Pushes and pull
+(Linux arm64 and Intel macOS are tested but not required), and commits it only when those pass. Pushes and pull
 requests run the same install test against the formula as committed.
 
 To update by hand:
