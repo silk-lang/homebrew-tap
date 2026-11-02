@@ -94,10 +94,6 @@ jobs:
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           fi
           echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
-          # A runner image's Homebrew can lag the formula API; brew test then fails to load llvm.
-          # Update before linking the tap: `brew update` would otherwise pull and rebase this
-          # checkout, which a pull request's detached merge commit does not survive.
-          brew update --quiet
           tap="$(brew --repository)/Library/Taps/silk-lang/homebrew-tap"
           mkdir -p "$(dirname "$tap")"
           rm -rf "$tap"
@@ -108,6 +104,8 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
         run: |
           set -euo pipefail
+          # A runner image's Homebrew can lag the formula API; brew test then fails to load llvm.
+          brew update --quiet
           brew install --formula silk-lang/tap/silk
           brew test silk-lang/tap/silk
           brew audit --formula silk-lang/tap/silk
