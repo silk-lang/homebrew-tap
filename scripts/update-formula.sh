@@ -131,9 +131,6 @@ class Silk < Formula
       url "${url[x86_64-apple-darwin]}"
       sha256 "${sha[x86_64-apple-darwin]}"
     end
-
-    # Silk links macOS programs with ld64.lld against its own libSystem stub.
-    depends_on "lld"
   end
 
   on_linux do
@@ -148,28 +145,27 @@ class Silk < Formula
     end
   end
 
-  # Silk hands Clang textual LLVM IR; no-libc targets need Clang 22 or newer.
-  depends_on "llvm"
-
   def install
-    # The archive holds the silk tool as bin/silk and the compiler as bin/silkc. The compiler finds
-    # lib/silk/stdlib beside its own bin directory, and the tool runs the silkc beside it when no
-    # project or default selects another installed version.
+    # The archive holds the silk tool as bin/silk, the compiler as bin/silkc, the standard library
+    # in lib/silk/stdlib and the release's own LLVM in lib/silk/llvm. The compiler finds both beside
+    # its own bin directory, and the tool runs the silkc beside it when no project or default selects
+    # another installed version.
     libexec.install "bin", "lib"
-    %w[silk silkc].each do |name|
-      (bin/name).write <<~SH
-        #!/bin/bash
-        # Use Homebrew's Clang unless SILK_CLANG or --clang picks another.
-        export SILK_CLANG="\\\${SILK_CLANG:-#{Formula["llvm"].opt_bin}/clang}"
-        exec "#{libexec}/bin/#{name}" "\\\$@"
-      SH
+    # lib/silk/llvm/bin/llvm is one multicall executable for Clang, lld and llvm-ar that runs the
+    # tool its file name names. The archive carries no links, and the compiler would make them on
+    # its first build; make them here, where the keg is still writable.
+    llvm_bin = libexec/"lib/silk/llvm/bin"
+    %w[clang ld.lld ld64.lld wasm-ld lld-link llvm-ar llvm-dlltool].each do |tool|
+      ln_s "llvm", llvm_bin/tool unless (llvm_bin/tool).exist?
     end
+    bin.write_exec_script libexec/"bin/silk", libexec/"bin/silkc"
   end
 
   test do
     assert_equal "silk v#{version}", shell_output("#{bin}/silkc --version").strip
     assert_equal "silk v#{version}", shell_output("#{bin}/silk --version").strip
-    system bin/"silk", "init", "hello"
+    # The default template is fetched from GitHub; the built-in one needs no network or git.
+    system bin/"silk", "init", "--template", "minimal", "hello"
     cd "hello" do
       assert_match "Hello, world!", shell_output("#{bin}/silk run")
     end
